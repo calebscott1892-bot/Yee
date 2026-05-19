@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Role = "employer" | "candidate";
 
@@ -48,6 +48,45 @@ type IntroRequest = {
   audit: string;
 };
 
+type IntroForm = {
+  compensation: string;
+  message: string;
+  roleTitle: string;
+  workMode: string;
+};
+
+type CandidateProfile = {
+  name: string;
+  title: string;
+  location: string;
+  workMode: string;
+  availability: string;
+  salaryRange: string;
+  visibility: "Visible" | "Paused";
+  contactConsent: "Intro requests" | "Hidden";
+  resumeStatus: "Reviewing" | "Verified" | "Needs evidence";
+  summary: string;
+};
+
+type ChecklistItem = {
+  complete: boolean;
+  label: string;
+};
+
+type StoredYeeState = {
+  version: 1;
+  activeRole: Role;
+  candidateExpertise: string[];
+  candidateProfile: CandidateProfile;
+  employerVerified: boolean;
+  introForm: IntroForm;
+  introRequests: IntroRequest[];
+  profileBoosted: boolean;
+  selectedCandidateId: string;
+  selectedExpertise: string[];
+  shortlistedIds: string[];
+};
+
 type IconName =
   | "alert"
   | "audit"
@@ -69,6 +108,8 @@ type IconName =
   | "spark"
   | "star";
 
+const STORAGE_KEY = "yee.prototype.state.v1";
+
 const expertiseOptions = [
   "Frontend Engineering",
   "Backend Systems",
@@ -83,6 +124,36 @@ const expertiseOptions = [
   "Education Tech",
   "Finance Ops",
 ];
+
+const defaultSelectedExpertise = [
+  "Frontend Engineering",
+  "Backend Systems",
+  "Product Design",
+  "Cloud Infrastructure",
+  "AI Workflow",
+];
+
+const defaultIntroForm: IntroForm = {
+  compensation: "$145k - $165k",
+  message:
+    "We are building a high-trust hiring workflow and your profile matches the product engineering scope we need.",
+  roleTitle: "Senior Product Engineer",
+  workMode: "Remote",
+};
+
+const defaultCandidateProfile: CandidateProfile = {
+  availability: "2 weeks notice",
+  contactConsent: "Intro requests",
+  location: "Remote, US",
+  name: "Jordan Hayes",
+  resumeStatus: "Reviewing",
+  salaryRange: "$120k - $145k",
+  summary:
+    "Operations-minded product generalist with experience turning messy workflows into calm internal tools.",
+  title: "Product Operations Specialist",
+  visibility: "Visible",
+  workMode: "Remote",
+};
 
 const candidates: Candidate[] = [
   {
@@ -332,44 +403,104 @@ const candidates: Candidate[] = [
   },
 ];
 
-const candidateChecklist = [
-  "Profile visibility is on",
-  "Five expertise areas selected",
-  "Contact consent configured",
-  "Attestation review complete",
-];
-
 export default function Home() {
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [activeRole, setActiveRole] = useState<Role>("employer");
   const [query, setQuery] = useState("");
-  const [selectedExpertise, setSelectedExpertise] = useState<string[]>([
-    "Frontend Engineering",
-    "Backend Systems",
-    "Product Design",
-    "Cloud Infrastructure",
-    "AI Workflow",
-  ]);
-  const [candidateExpertise, setCandidateExpertise] = useState<string[]>([
-    "Frontend Engineering",
-    "Backend Systems",
-    "Product Design",
-    "Cloud Infrastructure",
-    "AI Workflow",
-  ]);
+  const [selectedExpertise, setSelectedExpertise] = useState<string[]>(
+    defaultSelectedExpertise,
+  );
+  const [candidateExpertise, setCandidateExpertise] = useState<string[]>(
+    defaultSelectedExpertise,
+  );
   const [selectedCandidateId, setSelectedCandidateId] = useState("aisha-patel");
   const [shortlistedIds, setShortlistedIds] = useState<string[]>([
     "aisha-patel",
     "jason-li",
   ]);
+  const [employerVerified, setEmployerVerified] = useState(true);
   const [profileBoosted, setProfileBoosted] = useState(false);
   const [introRequests, setIntroRequests] = useState<IntroRequest[]>([]);
-  const [introForm, setIntroForm] = useState({
-    compensation: "$145k - $165k",
-    message:
-      "We are building a high-trust hiring workflow and your profile matches the product engineering scope we need.",
-    roleTitle: "Senior Product Engineer",
-    workMode: "Remote",
-  });
+  const [introForm, setIntroForm] = useState<IntroForm>(defaultIntroForm);
+  const [candidateProfile, setCandidateProfile] = useState<CandidateProfile>(
+    defaultCandidateProfile,
+  );
+
+  useEffect(() => {
+    const hydrationId = window.setTimeout(() => {
+      const storedState = readStoredState();
+
+      if (storedState) {
+        setActiveRole(
+          storedState.activeRole === "candidate" ? "candidate" : "employer",
+        );
+        setCandidateExpertise(limitedExpertise(storedState.candidateExpertise));
+        setCandidateProfile({
+          ...defaultCandidateProfile,
+          ...storedState.candidateProfile,
+        });
+        setEmployerVerified(storedState.employerVerified !== false);
+        setIntroForm({ ...defaultIntroForm, ...storedState.introForm });
+        setIntroRequests(
+          Array.isArray(storedState.introRequests)
+            ? storedState.introRequests
+            : [],
+        );
+        setProfileBoosted(Boolean(storedState.profileBoosted));
+        const storedCandidateId = storedState.selectedCandidateId;
+        const nextSelectedCandidateId =
+          typeof storedCandidateId === "string" &&
+          candidates.some((candidate) => candidate.id === storedCandidateId)
+            ? storedCandidateId
+            : "aisha-patel";
+        setSelectedCandidateId(nextSelectedCandidateId);
+        setSelectedExpertise(limitedExpertise(storedState.selectedExpertise));
+        setShortlistedIds(
+          Array.isArray(storedState.shortlistedIds)
+            ? storedState.shortlistedIds.filter((id) =>
+                candidates.some((candidate) => candidate.id === id),
+              )
+            : ["aisha-patel", "jason-li"],
+        );
+      }
+
+      setHasHydrated(true);
+    }, 0);
+
+    return () => window.clearTimeout(hydrationId);
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
+    writeStoredState({
+      activeRole,
+      candidateExpertise,
+      candidateProfile,
+      employerVerified,
+      introForm,
+      introRequests,
+      profileBoosted,
+      selectedCandidateId,
+      selectedExpertise,
+      shortlistedIds,
+      version: 1,
+    });
+  }, [
+    activeRole,
+    candidateExpertise,
+    candidateProfile,
+    employerVerified,
+    hasHydrated,
+    introForm,
+    introRequests,
+    profileBoosted,
+    selectedCandidateId,
+    selectedExpertise,
+    shortlistedIds,
+  ]);
 
   const visibleCandidates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -401,6 +532,46 @@ export default function Home() {
   const selectedIntroRequest = introRequests.find(
     (request) => request.candidateId === selectedCandidate.id,
   );
+  const candidateReadiness: ChecklistItem[] = [
+    {
+      complete: candidateProfile.visibility === "Visible",
+      label: "Profile visibility is on",
+    },
+    {
+      complete: candidateExpertise.length === 5,
+      label: `${candidateExpertise.length}/5 expertise areas selected`,
+    },
+    {
+      complete: candidateProfile.contactConsent !== "Hidden",
+      label: "Contact consent configured",
+    },
+    {
+      complete: candidateProfile.resumeStatus === "Verified",
+      label: `Attestation ${candidateProfile.resumeStatus.toLowerCase()}`,
+    },
+  ];
+  const employerReadiness: ChecklistItem[] = [
+    {
+      complete: employerVerified,
+      label: "Business identity verified",
+    },
+    {
+      complete: true,
+      label: "Candidate contact stays relayed",
+    },
+    {
+      complete: true,
+      label: "All intro activity is logged",
+    },
+    {
+      complete: true,
+      label: "Candidate acceptance required",
+    },
+  ];
+  const sidebarChecklist =
+    activeRole === "employer" ? employerReadiness : candidateReadiness;
+  const readinessCount = sidebarChecklist.filter((item) => item.complete).length;
+  const storageLabel = hasHydrated ? "Saved locally" : "Loading workspace";
 
   function toggleExpertise(area: string) {
     setSelectedExpertise((current) => {
@@ -442,8 +613,26 @@ export default function Home() {
     setSelectedCandidateId(candidateId);
   }
 
+  function updateCandidateProfile<Field extends keyof CandidateProfile>(
+    field: Field,
+    value: CandidateProfile[Field],
+  ) {
+    setCandidateProfile((current) => ({ ...current, [field]: value }));
+  }
+
+  function scrollToProfilePreview() {
+    document
+      .querySelector(".profile-drawer")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function submitIntro(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!employerVerified) {
+      return;
+    }
+
     const request: IntroRequest = {
       id: `intro-${selectedCandidate.id}`,
       candidateId: selectedCandidate.id,
@@ -523,26 +712,45 @@ export default function Home() {
           <NavItem icon="profile" label="Company profile" />
         </nav>
 
-        <section className="sidebar-card" aria-label="Candidate readiness">
+        <section className="sidebar-card" aria-label="Workspace readiness">
           <div className="sidebar-card-head">
             <Icon name="shield" />
-            <strong>Profile readiness</strong>
+            <strong>
+              {activeRole === "employer"
+                ? "Employer trust gate"
+                : "Profile readiness"}
+            </strong>
+            <span>{readinessCount}/4</span>
           </div>
           <ul>
-            {candidateChecklist.map((item, index) => (
-              <li key={item}>
-                <Icon name={index < 3 ? "check" : "alert"} />
-                {item}
+            {sidebarChecklist.map((item) => (
+              <li className={item.complete ? "" : "pending"} key={item.label}>
+                <Icon name={item.complete ? "check" : "alert"} />
+                {item.label}
               </li>
             ))}
           </ul>
           <button
             type="button"
-            className={profileBoosted ? "button success compact" : "button secondary compact"}
-            onClick={() => setProfileBoosted((current) => !current)}
+            className={
+              (activeRole === "employer" ? employerVerified : profileBoosted)
+                ? "button success compact"
+                : "button secondary compact"
+            }
+            onClick={() =>
+              activeRole === "employer"
+                ? setEmployerVerified((current) => !current)
+                : setProfileBoosted((current) => !current)
+            }
           >
-            <Icon name="spark" />
-            {profileBoosted ? "Boost active" : "Boost profile"}
+            <Icon name={activeRole === "employer" ? "shield" : "spark"} />
+            {activeRole === "employer"
+              ? employerVerified
+                ? "Pause verification"
+                : "Resume verification"
+              : profileBoosted
+                ? "Boost active"
+                : "Boost profile"}
           </button>
         </section>
 
@@ -563,6 +771,10 @@ export default function Home() {
             />
           </div>
           <div className="topbar-actions">
+            <span className="storage-pill">
+              <Icon name="shield" />
+              {storageLabel}
+            </span>
             <button type="button" className="icon-button" aria-label="Alerts">
               <Icon name="alert" />
             </button>
@@ -573,7 +785,9 @@ export default function Home() {
               <span>RM</span>
               <div>
                 <strong>Riley Morgan</strong>
-                <small>Verified employer</small>
+                <small>
+                  {employerVerified ? "Verified employer" : "Verification paused"}
+                </small>
               </div>
               <Icon name="chevron" />
             </div>
@@ -581,7 +795,12 @@ export default function Home() {
         </header>
 
         <div className="workspace-grid">
-          <section className="talent-column" aria-labelledby="discovery-title">
+          <section
+            className={`talent-column ${
+              activeRole === "candidate" ? "candidate-mode" : ""
+            }`}
+            aria-labelledby="discovery-title"
+          >
             <div className="section-heading">
               <div>
                 <h1 id="discovery-title">
@@ -590,19 +809,45 @@ export default function Home() {
                     : "Tune your discoverable profile"}
                 </h1>
                 <p>
-                  Search only opt-in profiles. Review evidence, consent, and
-                  fit before sending a structured intro request.
+                  {activeRole === "employer"
+                    ? "Search only opt-in profiles. Review evidence, consent, and fit before sending a structured intro request."
+                    : "Publish a concise profile, choose up to five expertise areas, and control when employers can request contact."}
                 </p>
               </div>
               <div className="heading-actions">
-                <button type="button" className="button secondary">
-                  <Icon name="save" />
-                  Save search
-                </button>
-                <button type="button" className="button primary">
-                  <Icon name="alert" />
-                  Create alert
-                </button>
+                {activeRole === "employer" ? (
+                  <>
+                    <button type="button" className="button secondary">
+                      <Icon name="save" />
+                      Save search
+                    </button>
+                    <button type="button" className="button primary">
+                      <Icon name="alert" />
+                      Create alert
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={
+                        profileBoosted ? "button success" : "button primary"
+                      }
+                      onClick={() => setProfileBoosted((current) => !current)}
+                    >
+                      <Icon name="spark" />
+                      {profileBoosted ? "Boost active" : "Boost profile"}
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={scrollToProfilePreview}
+                    >
+                      <Icon name="eye" />
+                      Profile preview
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -673,12 +918,139 @@ export default function Home() {
             </div>
 
             <section className="candidate-setup">
-              <div>
-                <h2>Candidate profile setup</h2>
-                <p>
-                  Candidates can publish up to five attested expertise areas and
-                  control when employers can request contact.
-                </p>
+              <div className="candidate-setup-head">
+                <div>
+                  <h2>Candidate profile setup</h2>
+                  <p>
+                    Build the profile employers discover. Yee keeps the draft
+                    saved locally while the prototype is still client-side.
+                  </p>
+                </div>
+                <span
+                  className={
+                    profileBoosted
+                      ? "success-label accepted"
+                      : "status-pill neutral"
+                  }
+                >
+                  <Icon name="spark" />
+                  {profileBoosted ? "Boost active" : "Standard visibility"}
+                </span>
+              </div>
+
+              <div className="profile-builder">
+                <div className="profile-builder-grid">
+                  <label>
+                    <span>Display name</span>
+                    <input
+                      value={candidateProfile.name}
+                      onChange={(event) =>
+                        updateCandidateProfile("name", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Profile title</span>
+                    <input
+                      value={candidateProfile.title}
+                      onChange={(event) =>
+                        updateCandidateProfile("title", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Location</span>
+                    <input
+                      value={candidateProfile.location}
+                      onChange={(event) =>
+                        updateCandidateProfile("location", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Salary range</span>
+                    <input
+                      value={candidateProfile.salaryRange}
+                      onChange={(event) =>
+                        updateCandidateProfile("salaryRange", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Work mode</span>
+                    <select
+                      value={candidateProfile.workMode}
+                      onChange={(event) =>
+                        updateCandidateProfile("workMode", event.target.value)
+                      }
+                    >
+                      <option>Remote</option>
+                      <option>Hybrid</option>
+                      <option>Onsite</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Availability</span>
+                    <select
+                      value={candidateProfile.availability}
+                      onChange={(event) =>
+                        updateCandidateProfile("availability", event.target.value)
+                      }
+                    >
+                      <option>Immediately</option>
+                      <option>2 weeks notice</option>
+                      <option>4 weeks notice</option>
+                      <option>Open to future roles</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Profile visibility</span>
+                    <select
+                      value={candidateProfile.visibility}
+                      onChange={(event) =>
+                        updateCandidateProfile(
+                          "visibility",
+                          event.target.value as CandidateProfile["visibility"],
+                        )
+                      }
+                    >
+                      <option>Visible</option>
+                      <option>Paused</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Contact consent</span>
+                    <select
+                      value={candidateProfile.contactConsent}
+                      onChange={(event) =>
+                        updateCandidateProfile(
+                          "contactConsent",
+                          event.target
+                            .value as CandidateProfile["contactConsent"],
+                        )
+                      }
+                    >
+                      <option>Intro requests</option>
+                      <option>Hidden</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label className="profile-summary-field">
+                  <span>Resume summary</span>
+                  <textarea
+                    value={candidateProfile.summary}
+                    onChange={(event) =>
+                      updateCandidateProfile("summary", event.target.value)
+                    }
+                    rows={3}
+                  />
+                </label>
+              </div>
+
+              <div className="candidate-area-header">
+                <strong>Discoverable expertise</strong>
+                <span>{candidateExpertise.length}/5 selected</span>
               </div>
               <div className="setup-chips">
                 {expertiseOptions.slice(0, 10).map((area) => {
@@ -698,6 +1070,26 @@ export default function Home() {
                   );
                 })}
               </div>
+
+              <div className="profile-builder-actions">
+                <button
+                  type="button"
+                  className={
+                    profileBoosted
+                      ? "button success compact"
+                      : "button secondary compact"
+                  }
+                  onClick={() => setProfileBoosted((current) => !current)}
+                >
+                  <Icon name="spark" />
+                  {profileBoosted ? "Boost active" : "Boost profile"}
+                </button>
+                <span>
+                  {hasHydrated
+                    ? "Local draft saved in this browser."
+                    : "Loading saved draft."}
+                </span>
+              </div>
             </section>
           </section>
 
@@ -705,6 +1097,7 @@ export default function Home() {
             candidate={selectedCandidate}
             introForm={introForm}
             introRequests={introRequests}
+            employerVerified={employerVerified}
             selectedIntroRequest={selectedIntroRequest}
             shortlisted={shortlistedIds.includes(selectedCandidate.id)}
             onIntroChange={(field, value) =>
@@ -797,6 +1190,7 @@ function CandidateRow({
 
 function ProfileDrawer({
   candidate,
+  employerVerified,
   introForm,
   introRequests,
   selectedIntroRequest,
@@ -807,6 +1201,7 @@ function ProfileDrawer({
   onSubmitIntro,
 }: {
   candidate: Candidate;
+  employerVerified: boolean;
   introForm: {
     compensation: string;
     message: string;
@@ -824,9 +1219,11 @@ function ProfileDrawer({
   onShortlist: () => void;
   onSubmitIntro: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const introButtonLabel = selectedIntroRequest
-    ? "Update intro request"
-    : "Send intro request";
+  const introButtonLabel = !employerVerified
+    ? "Verify employer first"
+    : selectedIntroRequest
+      ? "Update intro request"
+      : "Send intro request";
 
   return (
     <aside className="profile-drawer" aria-label="Selected candidate profile">
@@ -956,14 +1353,25 @@ function ProfileDrawer({
               rows={4}
             />
           </label>
-          <div className="consent-note">
+          <div className={employerVerified ? "consent-note" : "consent-note blocked"}>
             <Icon name="shield" />
-            <span>
-              Logged for audit. The candidate chooses whether to reveal a direct
-              contact channel.
-            </span>
+            {employerVerified ? (
+              <span>
+                Logged for audit. The candidate chooses whether to reveal a direct
+                contact channel.
+              </span>
+            ) : (
+              <span>
+                Employer verification is paused. Intro requests stay locked until
+                the business identity gate is active.
+              </span>
+            )}
           </div>
-          <button type="submit" className="button primary">
+          <button
+            type="submit"
+            className="button primary"
+            disabled={!employerVerified}
+          >
             <Icon name="contact" />
             {introButtonLabel}
           </button>
@@ -1063,6 +1471,45 @@ function ProfileDrawer({
 
 function getStatusClass(status: IntroStatus) {
   return status.toLowerCase().replaceAll(" ", "-");
+}
+
+function limitedExpertise(value: unknown) {
+  if (!Array.isArray(value)) {
+    return defaultSelectedExpertise;
+  }
+
+  return value
+    .filter(
+      (area): area is string =>
+        typeof area === "string" && expertiseOptions.includes(area),
+    )
+    .slice(0, 5);
+}
+
+function readStoredState(): Partial<StoredYeeState> | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const storedState = window.localStorage.getItem(STORAGE_KEY);
+
+    if (!storedState) {
+      return null;
+    }
+
+    return JSON.parse(storedState) as Partial<StoredYeeState>;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredState(state: StoredYeeState) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 function Signal({ label, value }: { label: string; value: string }) {

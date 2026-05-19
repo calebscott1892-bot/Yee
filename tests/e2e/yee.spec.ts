@@ -25,9 +25,36 @@ test("supports core discovery and profile interactions", async ({ page }) => {
   await expect(page.getByText("Accepted", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Relay channel opened")).toBeVisible();
 
+  await page.getByRole("button", { name: "Pause verification" }).click();
+  await expect(page.getByText("Verification paused")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Verify employer first" }),
+  ).toBeDisabled();
+
+  await page.getByRole("button", { name: "Resume verification" }).click();
+  await expect(
+    page.getByRole("button", { name: "Update intro request" }),
+  ).toBeEnabled();
+
   await page.getByRole("button", { name: "Candidate" }).click();
   await expect(page.getByText("Candidate workspace")).toBeVisible();
 
-  await page.getByRole("button", { name: "Boost profile" }).click();
-  await expect(page.getByRole("button", { name: "Boost active" })).toBeVisible();
+  await page.getByLabel("Profile title").fill("Marketplace Operations Lead");
+  await expect(page.getByText("Local draft saved in this browser.")).toBeVisible();
+
+  await page
+    .locator(".profile-builder-actions")
+    .getByRole("button", { name: "Boost profile" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Boost active" }).first(),
+  ).toBeVisible();
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByRole("heading", { name: "Tune your discoverable profile" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Profile title")).toHaveValue(
+    "Marketplace Operations Lead",
+  );
 });

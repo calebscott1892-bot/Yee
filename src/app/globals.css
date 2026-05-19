@@ -210,6 +210,13 @@ svg {
   gap: 9px;
 }
 
+.sidebar-card-head span {
+  color: var(--teal-strong);
+  font-size: 12px;
+  font-weight: 800;
+  margin-left: auto;
+}
+
 .sidebar-card-head svg {
   color: var(--teal);
 }
@@ -243,6 +250,10 @@ svg {
   color: var(--green);
   height: 15px;
   width: 15px;
+}
+
+.sidebar-card li.pending svg {
+  color: var(--amber);
 }
 
 .sidebar-footer {
@@ -295,6 +306,26 @@ svg {
   align-items: center;
   display: flex;
   gap: 10px;
+}
+
+.storage-pill {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--teal-strong);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 760;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px;
+  white-space: nowrap;
+}
+
+.storage-pill svg {
+  height: 15px;
+  width: 15px;
 }
 
 .icon-button {
@@ -362,6 +393,33 @@ svg {
   min-width: 0;
 }
 
+.talent-column {
+  align-content: start;
+  display: grid;
+}
+
+.talent-column.candidate-mode .section-heading {
+  order: 0;
+}
+
+.talent-column.candidate-mode .candidate-setup {
+  margin-bottom: 18px;
+  margin-top: 0;
+  order: 1;
+}
+
+.talent-column.candidate-mode .filter-panel {
+  order: 2;
+}
+
+.talent-column.candidate-mode .list-toolbar {
+  order: 3;
+}
+
+.talent-column.candidate-mode .candidate-list {
+  order: 4;
+}
+
 .section-heading {
   align-items: start;
   display: grid;
@@ -408,7 +466,6 @@ svg {
   min-height: 42px;
   padding: 0 14px;
   transition:
-    background 160ms ease,
     border-color 160ms ease,
     transform 160ms ease;
   white-space: nowrap;
@@ -432,6 +489,12 @@ svg {
 .button.success {
   background: var(--green);
   color: #fff;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
 }
 
 .button.compact {
@@ -716,9 +779,78 @@ svg {
   margin-top: 14px;
 }
 
+.candidate-setup-head,
+.candidate-area-header,
+.profile-builder-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
 .candidate-setup h2 {
   font-size: 17px;
   font-weight: 760;
+}
+
+.candidate-area-header strong {
+  font-size: 14px;
+}
+
+.candidate-area-header span,
+.profile-builder-actions span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-builder {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-builder-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-builder label,
+.profile-summary-field {
+  display: grid;
+  gap: 6px;
+}
+
+.profile-builder label span,
+.profile-summary-field span {
+  color: #3b4843;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.profile-builder input,
+.profile-builder select,
+.profile-builder textarea {
+  background: #fbfdfc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: 14px;
+  outline: 0;
+  padding: 10px 11px;
+  width: 100%;
+}
+
+.profile-builder textarea {
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.profile-builder input:focus,
+.profile-builder select:focus,
+.profile-builder textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0, 127, 122, 0.12);
 }
 
 .setup-chips,
@@ -817,6 +949,11 @@ svg {
   gap: 6px;
   min-height: 30px;
   padding: 0 10px;
+}
+
+.status-pill.neutral {
+  background: #f4f7f6;
+  color: #53615c;
 }
 
 .success-label.accepted,
@@ -989,6 +1126,16 @@ svg {
 
 .consent-note svg {
   color: var(--amber);
+}
+
+.consent-note.blocked {
+  background: var(--red-soft);
+  border-color: #f1c4c0;
+  color: #7c2424;
+}
+
+.consent-note.blocked svg {
+  color: var(--red);
 }
 
 .audit-note {
@@ -1200,6 +1347,7 @@ svg {
   .candidate-row,
   .profile-drawer,
   .form-grid,
+  .profile-builder-grid,
   .signal-grid {
     grid-template-columns: 1fr;
   }
@@ -1231,6 +1379,7 @@ svg {
   .heading-actions,
   .list-toolbar,
   .list-toolbar > div,
+  .profile-builder-actions,
   .row-actions {
     display: grid;
     grid-template-columns: 1fr;
@@ -1294,6 +1443,8 @@ svg {
   }
 
   .filter-header,
+  .candidate-setup-head,
+  .candidate-area-header,
   .drawer-card-heading,
   .request-item-head,
   .summary-actions {
