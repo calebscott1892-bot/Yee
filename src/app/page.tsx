@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 type Role = "employer" | "candidate";
+
+type Evidence = {
+  label: string;
+  source: string;
+  status: "Verified" | "Reviewing" | "Self-attested";
+};
 
 type Candidate = {
   id: string;
@@ -10,7 +16,7 @@ type Candidate = {
   initials: string;
   title: string;
   location: string;
-  preference: string;
+  workMode: string;
   availability: string;
   match: number;
   matchNote: string;
@@ -22,11 +28,13 @@ type Candidate = {
   salaryRange: string;
   lastActive: string;
   highlight: string;
+  preferences: string[];
+  evidence: Evidence[];
+  auditNote: string;
 };
 
 type IconName =
   | "alert"
-  | "arrow"
   | "audit"
   | "boost"
   | "briefcase"
@@ -68,10 +76,10 @@ const candidates: Candidate[] = [
     initials: "AP",
     title: "Senior Frontend Engineer",
     location: "Austin, TX",
-    preference: "Remote",
+    workMode: "Remote",
     availability: "Immediately",
     match: 96,
-    matchNote: "5 of 5 expertise areas overlap",
+    matchNote: "5 of 5 selected areas overlap",
     expertise: [
       "Frontend Engineering",
       "Backend Systems",
@@ -81,11 +89,36 @@ const candidates: Candidate[] = [
     ],
     verified: true,
     attestation: "Peer and portfolio attested",
-    contactConsent: "Open to verified employer contact",
-    contactMethods: ["Email", "InMail"],
+    contactConsent: "Open to verified employer intro requests",
+    contactMethods: ["Email relay", "In-app message"],
     salaryRange: "$145k - $165k",
     lastActive: "Today",
-    highlight: "Built hiring workflow dashboards and design systems at scale.",
+    highlight:
+      "Built hiring workflow dashboards, accessibility systems, and AI-assisted admin tools for high-volume operations teams.",
+    preferences: [
+      "Remote-first product team",
+      "Design systems ownership",
+      "Clear compensation range before intro",
+    ],
+    evidence: [
+      {
+        label: "Portfolio walkthrough",
+        source: "Reviewed by Yee moderation",
+        status: "Verified",
+      },
+      {
+        label: "Frontend architecture sample",
+        source: "Candidate supplied work sample",
+        status: "Verified",
+      },
+      {
+        label: "Peer reference",
+        source: "Former design lead",
+        status: "Verified",
+      },
+    ],
+    auditNote:
+      "Profile viewed from saved search: Frontend, Backend, Product Design, Cloud, AI Workflow.",
   },
   {
     id: "david-okafor",
@@ -93,7 +126,7 @@ const candidates: Candidate[] = [
     initials: "DO",
     title: "Backend Platform Engineer",
     location: "New York, NY",
-    preference: "Remote",
+    workMode: "Remote",
     availability: "2 weeks notice",
     match: 91,
     matchNote: "Strong backend and cloud signal",
@@ -106,11 +139,36 @@ const candidates: Candidate[] = [
     ],
     verified: true,
     attestation: "Manager reference attested",
-    contactConsent: "Open to verified employer contact",
-    contactMethods: ["Email"],
+    contactConsent: "Open to verified employer intro requests",
+    contactMethods: ["Email relay"],
     salaryRange: "$155k - $180k",
     lastActive: "Yesterday",
-    highlight: "Owns API reliability, event pipelines, and internal developer platforms.",
+    highlight:
+      "Owns API reliability, event pipelines, and internal developer platforms for compliance-heavy products.",
+    preferences: [
+      "Platform or infra team",
+      "Remote with quarterly onsite",
+      "Senior IC path",
+    ],
+    evidence: [
+      {
+        label: "Reliability case study",
+        source: "Former employer summary",
+        status: "Verified",
+      },
+      {
+        label: "Systems design interview",
+        source: "Yee attestation session",
+        status: "Verified",
+      },
+      {
+        label: "Security training",
+        source: "Candidate credential",
+        status: "Reviewing",
+      },
+    ],
+    auditNote:
+      "Search used job-related filters only: Backend Systems, Cloud Infrastructure, Cybersecurity.",
   },
   {
     id: "maria-gomez",
@@ -118,7 +176,7 @@ const candidates: Candidate[] = [
     initials: "MG",
     title: "Product Designer",
     location: "San Francisco, CA",
-    preference: "Hybrid",
+    workMode: "Hybrid",
     availability: "4 weeks notice",
     match: 88,
     matchNote: "Excellent design and research overlap",
@@ -131,11 +189,36 @@ const candidates: Candidate[] = [
     ],
     verified: true,
     attestation: "Case studies attested",
-    contactConsent: "Contact by intro request only",
-    contactMethods: ["InMail"],
+    contactConsent: "Intro request only",
+    contactMethods: ["In-app message"],
     salaryRange: "$135k - $155k",
     lastActive: "Today",
-    highlight: "Turns complex regulated workflows into accessible product surfaces.",
+    highlight:
+      "Turns complex regulated workflows into accessible product surfaces for clinical and education teams.",
+    preferences: [
+      "Hybrid Bay Area role",
+      "Research access",
+      "0-to-1 product scope",
+    ],
+    evidence: [
+      {
+        label: "Healthcare workflow case study",
+        source: "Yee portfolio review",
+        status: "Verified",
+      },
+      {
+        label: "Design systems sample",
+        source: "Candidate supplied work sample",
+        status: "Verified",
+      },
+      {
+        label: "Research plan",
+        source: "Self-submitted",
+        status: "Self-attested",
+      },
+    ],
+    auditNote:
+      "Contact requires candidate acceptance before any direct channel is released.",
   },
   {
     id: "jason-li",
@@ -143,7 +226,7 @@ const candidates: Candidate[] = [
     initials: "JL",
     title: "Cloud Security Engineer",
     location: "Seattle, WA",
-    preference: "Remote",
+    workMode: "Remote",
     availability: "Immediately",
     match: 84,
     matchNote: "Cloud, security, and data coverage",
@@ -156,11 +239,36 @@ const candidates: Candidate[] = [
     ],
     verified: true,
     attestation: "Certification and employer attested",
-    contactConsent: "Open to verified employer contact",
-    contactMethods: ["Email", "Calendar"],
+    contactConsent: "Open to verified employer intro requests",
+    contactMethods: ["Email relay", "Calendar request"],
     salaryRange: "$150k - $175k",
     lastActive: "3 days ago",
-    highlight: "Secures cloud environments while keeping engineering velocity intact.",
+    highlight:
+      "Secures cloud environments while keeping developer experience and deployment velocity intact.",
+    preferences: [
+      "Security engineering team",
+      "AWS-heavy environment",
+      "Incident response rotation capped",
+    ],
+    evidence: [
+      {
+        label: "Cloud security credential",
+        source: "Credential provider",
+        status: "Verified",
+      },
+      {
+        label: "Threat model sample",
+        source: "Yee review",
+        status: "Verified",
+      },
+      {
+        label: "Employer reference",
+        source: "Former security director",
+        status: "Verified",
+      },
+    ],
+    auditNote:
+      "Employer sees contact relay only until candidate accepts the intro request.",
   },
   {
     id: "priya-shah",
@@ -168,7 +276,7 @@ const candidates: Candidate[] = [
     initials: "PS",
     title: "Revenue Operations Analyst",
     location: "Chicago, IL",
-    preference: "Remote",
+    workMode: "Remote",
     availability: "2 weeks notice",
     match: 80,
     matchNote: "Useful ops and analytics match",
@@ -181,72 +289,39 @@ const candidates: Candidate[] = [
     ],
     verified: false,
     attestation: "Self-attested, review pending",
-    contactConsent: "Open to verified employer contact",
-    contactMethods: ["Email"],
+    contactConsent: "Open to verified employer intro requests",
+    contactMethods: ["Email relay"],
     salaryRange: "$105k - $125k",
     lastActive: "Today",
-    highlight: "Automates pipeline reporting, territory planning, and handoff quality.",
-  },
-  {
-    id: "noah-williams",
-    name: "Noah Williams",
-    initials: "NW",
-    title: "Customer Success Lead",
-    location: "Denver, CO",
-    preference: "Hybrid",
-    availability: "6 weeks notice",
-    match: 76,
-    matchNote: "Good customer and education coverage",
-    expertise: [
-      "Customer Success",
-      "Education Tech",
-      "Sales Operations",
-      "Data Analytics",
-      "AI Workflow",
+    highlight:
+      "Automates pipeline reporting, territory planning, and customer handoff quality for growth teams.",
+    preferences: [
+      "Revenue operations remit",
+      "Manager path available",
+      "Remote Central time overlap",
     ],
-    verified: true,
-    attestation: "Employer and metrics attested",
-    contactConsent: "Contact by intro request only",
-    contactMethods: ["InMail"],
-    salaryRange: "$120k - $140k",
-    lastActive: "1 week ago",
-    highlight: "Leads renewal playbooks for high-touch B2B implementation teams.",
-  },
-];
-
-const complianceItems = [
-  {
-    icon: "shield" as const,
-    title: "Employer verification",
-    status: "Verified",
-    body: "Only verified organizations can reveal contact options or send requests.",
-  },
-  {
-    icon: "audit" as const,
-    title: "Selection log",
-    status: "Recording",
-    body: "Search filters, profile views, shortlist actions, and contact requests are logged.",
-  },
-  {
-    icon: "lock" as const,
-    title: "Consent first",
-    status: "Opt-in",
-    body: "Candidates control discoverability, contact methods, and visibility to employers.",
-  },
-  {
-    icon: "filter" as const,
-    title: "Fair hiring guardrails",
-    status: "Skill focused",
-    body: "Search ranking stays tied to declared expertise, availability, and job-related signals.",
+    evidence: [
+      {
+        label: "Dashboard sample",
+        source: "Candidate supplied work sample",
+        status: "Reviewing",
+      },
+      {
+        label: "Pipeline automation summary",
+        source: "Self-submitted",
+        status: "Self-attested",
+      },
+    ],
+    auditNote:
+      "Pending attestation is visible to employers and should affect trust display, not eligibility.",
   },
 ];
 
 const candidateChecklist = [
-  "Basic information",
-  "Resume and work history",
-  "Five expertise areas",
-  "Attestation review",
-  "Visibility and contact consent",
+  "Profile visibility is on",
+  "Five expertise areas selected",
+  "Contact consent configured",
+  "Attestation review complete",
 ];
 
 export default function Home() {
@@ -272,6 +347,14 @@ export default function Home() {
     "jason-li",
   ]);
   const [profileBoosted, setProfileBoosted] = useState(false);
+  const [introSubmitted, setIntroSubmitted] = useState(false);
+  const [introForm, setIntroForm] = useState({
+    compensation: "$145k - $165k",
+    message:
+      "We are building a high-trust hiring workflow and your profile matches the product engineering scope we need.",
+    roleTitle: "Senior Product Engineer",
+    workMode: "Remote",
+  });
 
   const visibleCandidates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -285,7 +368,7 @@ export default function Home() {
           candidate.name,
           candidate.title,
           candidate.location,
-          candidate.preference,
+          candidate.workMode,
           ...candidate.expertise,
         ]
           .join(" ")
@@ -300,8 +383,6 @@ export default function Home() {
     visibleCandidates.find((candidate) => candidate.id === selectedCandidateId) ??
     visibleCandidates[0] ??
     candidates[0];
-
-  const profileCompleteness = profileBoosted ? 92 : 84;
 
   function toggleExpertise(area: string) {
     setSelectedExpertise((current) => {
@@ -339,8 +420,18 @@ export default function Home() {
     );
   }
 
+  function selectCandidate(candidateId: string) {
+    setSelectedCandidateId(candidateId);
+    setIntroSubmitted(false);
+  }
+
+  function submitIntro(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIntroSubmitted(true);
+  }
+
   return (
-    <main className="app">
+    <main className="app-shell">
       <aside className="sidebar" aria-label="Workspace navigation">
         <div className="brand">
           <span className="brand-mark">Y</span>
@@ -366,7 +457,7 @@ export default function Home() {
           </button>
         </div>
 
-        <nav className="nav-section" aria-label="Primary">
+        <nav className="nav-section" aria-label="Primary navigation">
           <span className="nav-label">
             {activeRole === "employer"
               ? "Employer workspace"
@@ -374,18 +465,33 @@ export default function Home() {
           </span>
           <NavItem active icon="search" label="Discover talent" />
           <NavItem icon="save" label="Shortlist" count={shortlistedIds.length} />
-          <NavItem icon="message" label="Conversations" count={4} />
-          <NavItem icon="alert" label="Talent alerts" />
+          <NavItem icon="message" label="Intro requests" count={introSubmitted ? 1 : 0} />
+          <NavItem icon="audit" label="Audit log" />
           <NavItem icon="profile" label="Company profile" />
         </nav>
 
-        <nav className="nav-section" aria-label="Candidate tools">
-          <span className="nav-label">Profile tools</span>
-          <NavItem icon="profile" label="My profile" />
-          <NavItem icon="star" label="Expertise and skills" />
-          <NavItem icon="eye" label="Visibility" />
-          <NavItem icon="boost" label="Profile boost" />
-        </nav>
+        <section className="sidebar-card" aria-label="Candidate readiness">
+          <div className="sidebar-card-head">
+            <Icon name="shield" />
+            <strong>Profile readiness</strong>
+          </div>
+          <ul>
+            {candidateChecklist.map((item, index) => (
+              <li key={item}>
+                <Icon name={index < 3 ? "check" : "alert"} />
+                {item}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className={profileBoosted ? "button success compact" : "button secondary compact"}
+            onClick={() => setProfileBoosted((current) => !current)}
+          >
+            <Icon name="spark" />
+            {profileBoosted ? "Boost active" : "Boost profile"}
+          </button>
+        </section>
 
         <div className="sidebar-footer">
           <NavItem icon="settings" label="Settings" />
@@ -400,7 +506,7 @@ export default function Home() {
               aria-label="Search candidates"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by skill, role, location, or keyword"
+              placeholder="Search skill, role, location, or keyword"
             />
           </div>
           <div className="topbar-actions">
@@ -414,15 +520,15 @@ export default function Home() {
               <span>RM</span>
               <div>
                 <strong>Riley Morgan</strong>
-                <small>Acme Corp</small>
+                <small>Verified employer</small>
               </div>
               <Icon name="chevron" />
             </div>
           </div>
         </header>
 
-        <div className="content-grid">
-          <section className="discovery" aria-labelledby="discovery-title">
+        <div className="workspace-grid">
+          <section className="talent-column" aria-labelledby="discovery-title">
             <div className="section-heading">
               <div>
                 <h1 id="discovery-title">
@@ -431,8 +537,8 @@ export default function Home() {
                     : "Tune your discoverable profile"}
                 </h1>
                 <p>
-                  Employers search verified, opt-in profiles by job-related
-                  expertise. Candidates stop repeating applications.
+                  Search only opt-in profiles. Review evidence, consent, and
+                  fit before sending a structured intro request.
                 </p>
               </div>
               <div className="heading-actions">
@@ -447,7 +553,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="filter-panel" aria-label="Expertise filters">
+            <section className="filter-panel" aria-label="Expertise filters">
               <div className="filter-header">
                 <div>
                   <strong>Expertise areas</strong>
@@ -480,7 +586,7 @@ export default function Home() {
                   );
                 })}
               </div>
-            </div>
+            </section>
 
             <div className="list-toolbar">
               <span>
@@ -490,7 +596,7 @@ export default function Home() {
               <div>
                 <button type="button" className="button secondary compact">
                   <Icon name="filter" />
-                  More filters
+                  Filters
                 </button>
                 <button type="button" className="button secondary compact">
                   Best match
@@ -501,55 +607,25 @@ export default function Home() {
 
             <div className="candidate-list">
               {visibleCandidates.map((candidate) => (
-                <CandidateCard
+                <CandidateRow
                   key={candidate.id}
                   candidate={candidate}
                   selected={candidate.id === selectedCandidate.id}
                   shortlisted={shortlistedIds.includes(candidate.id)}
                   selectedExpertise={selectedExpertise}
-                  onSelect={() => setSelectedCandidateId(candidate.id)}
+                  onSelect={() => selectCandidate(candidate.id)}
                   onShortlist={() => toggleShortlist(candidate.id)}
                 />
               ))}
             </div>
-          </section>
 
-          <aside className="profile-rail" aria-label="Candidate profile setup">
-            <SelectedProfile
-              candidate={selectedCandidate}
-              shortlisted={shortlistedIds.includes(selectedCandidate.id)}
-              onShortlist={() => toggleShortlist(selectedCandidate.id)}
-            />
-
-            <section className="panel">
-              <div className="panel-heading">
-                <h2>Your candidate profile</h2>
-                <a href="#profile-preview">Preview</a>
-              </div>
-              <div className="progress-row">
-                <span>Profile completeness</span>
-                <strong>{profileCompleteness}%</strong>
-              </div>
-              <div
-                className="progress-bar"
-                aria-label={`Profile ${profileCompleteness}% complete`}
-              >
-                <span style={{ width: `${profileCompleteness}%` }} />
-              </div>
-              <ul className="check-list">
-                {candidateChecklist.map((item, index) => (
-                  <li key={item}>
-                    <Icon name={index < 4 ? "check" : "alert"} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="panel">
-              <div className="panel-heading">
-                <h2>Attested expertise</h2>
-                <span>{candidateExpertise.length}/5</span>
+            <section className="candidate-setup">
+              <div>
+                <h2>Candidate profile setup</h2>
+                <p>
+                  Candidates can publish up to five attested expertise areas and
+                  control when employers can request contact.
+                </p>
               </div>
               <div className="setup-chips">
                 {expertiseOptions.slice(0, 10).map((area) => {
@@ -570,69 +646,26 @@ export default function Home() {
                 })}
               </div>
             </section>
+          </section>
 
-            <section className="panel split">
-              <div>
-                <h2>Visibility and consent</h2>
-                <p>Visible to verified employers only.</p>
-              </div>
-              <button type="button" className="button secondary compact">
-                <Icon name="lock" />
-                Edit
-              </button>
-            </section>
-
-            <section className="panel boost-panel">
-              <div>
-                <h2>Profile boost</h2>
-                <p>
-                  Optional promotion for higher placement. No hire or interview
-                  guarantee.
-                </p>
-              </div>
-              <button
-                type="button"
-                className={profileBoosted ? "button success" : "button primary"}
-                onClick={() => setProfileBoosted((current) => !current)}
-              >
-                <Icon name="spark" />
-                {profileBoosted ? "Boost active" : "Boost profile"}
-              </button>
-            </section>
-          </aside>
-
-          <aside className="trust-rail" aria-label="Trust and compliance">
-            <div className="rail-heading">
-              <h2>Trust controls</h2>
-              <p>Built before ranking or outreach becomes automatic.</p>
-            </div>
-            {complianceItems.map((item) => (
-              <article key={item.title} className="trust-card">
-                <div className="trust-icon">
-                  <Icon name={item.icon} />
-                </div>
-                <div>
-                  <h3>{item.title}</h3>
-                  <strong>{item.status}</strong>
-                  <p>{item.body}</p>
-                </div>
-              </article>
-            ))}
-            <section className="policy-note">
-              <h3>Product rule</h3>
-              <p>
-                Boosting can improve placement only inside consented searches.
-                It must never claim bias-free outcomes without evidence.
-              </p>
-            </section>
-          </aside>
+          <ProfileDrawer
+            candidate={selectedCandidate}
+            introForm={introForm}
+            introSubmitted={introSubmitted}
+            shortlisted={shortlistedIds.includes(selectedCandidate.id)}
+            onIntroChange={(field, value) =>
+              setIntroForm((current) => ({ ...current, [field]: value }))
+            }
+            onShortlist={() => toggleShortlist(selectedCandidate.id)}
+            onSubmitIntro={submitIntro}
+          />
         </div>
       </section>
     </main>
   );
 }
 
-function CandidateCard({
+function CandidateRow({
   candidate,
   selected,
   shortlisted,
@@ -652,7 +685,7 @@ function CandidateCard({
   );
 
   return (
-    <article className={`candidate-card ${selected ? "selected" : ""}`}>
+    <article className={`candidate-row ${selected ? "selected" : ""}`}>
       <button
         type="button"
         className="candidate-main"
@@ -667,7 +700,7 @@ function CandidateCard({
           </div>
           <p>{candidate.title}</p>
           <span>
-            {candidate.location} · {candidate.preference}
+            {candidate.location} - {candidate.workMode}
           </span>
         </div>
       </button>
@@ -688,20 +721,9 @@ function CandidateCard({
         )}
       </div>
 
-      <div className="status-wrap">
-        <span>
-          <Icon name="check" />
-          {candidate.availability}
-        </span>
-        <span>
-          <Icon name="lock" />
-          {candidate.contactConsent}
-        </span>
-      </div>
-
-      <div className="card-actions">
+      <div className="row-actions">
         <button type="button" className="button primary compact" onClick={onSelect}>
-          View
+          View profile
         </button>
         <button
           type="button"
@@ -716,54 +738,179 @@ function CandidateCard({
   );
 }
 
-function SelectedProfile({
+function ProfileDrawer({
   candidate,
+  introForm,
+  introSubmitted,
   shortlisted,
+  onIntroChange,
   onShortlist,
+  onSubmitIntro,
 }: {
   candidate: Candidate;
+  introForm: {
+    compensation: string;
+    message: string;
+    roleTitle: string;
+    workMode: string;
+  };
+  introSubmitted: boolean;
   shortlisted: boolean;
+  onIntroChange: (
+    field: "compensation" | "message" | "roleTitle" | "workMode",
+    value: string,
+  ) => void;
   onShortlist: () => void;
+  onSubmitIntro: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <section className="selected-profile" id="profile-preview">
-      <div className="selected-head">
-        <Avatar initials={candidate.initials} verified={candidate.verified} />
-        <div>
-          <h2>{candidate.name}</h2>
-          <p>{candidate.title}</p>
+    <aside className="profile-drawer" aria-label="Selected candidate profile">
+      <section className="drawer-card profile-summary">
+        <div className="drawer-header">
+          <Avatar initials={candidate.initials} verified={candidate.verified} />
+          <div>
+            <h2>{candidate.name}</h2>
+            <p>{candidate.title}</p>
+          </div>
         </div>
-      </div>
-      <p>{candidate.highlight}</p>
-      <dl>
-        <div>
-          <dt>Availability</dt>
-          <dd>{candidate.availability}</dd>
+        <p>{candidate.highlight}</p>
+        <div className="summary-actions">
+          <button type="button" className="button secondary compact" onClick={onShortlist}>
+            <Icon name="save" />
+            {shortlisted ? "Saved" : "Save"}
+          </button>
+          <span className="status-pill">
+            <Icon name="lock" />
+            Consent checked
+          </span>
         </div>
-        <div>
-          <dt>Preferred range</dt>
-          <dd>{candidate.salaryRange}</dd>
+      </section>
+
+      <section className="drawer-card signals-card">
+        <h3>Profile signals</h3>
+        <div className="signal-grid">
+          <Signal label="Availability" value={candidate.availability} />
+          <Signal label="Range" value={candidate.salaryRange} />
+          <Signal label="Work mode" value={candidate.workMode} />
+          <Signal label="Last active" value={candidate.lastActive} />
         </div>
-        <div>
-          <dt>Attestation</dt>
-          <dd>{candidate.attestation}</dd>
+      </section>
+
+      <section className="drawer-card expertise-card">
+        <div className="drawer-card-heading">
+          <h3>Attested expertise</h3>
+          <span>{candidate.expertise.length}/5</span>
         </div>
-        <div>
-          <dt>Last active</dt>
-          <dd>{candidate.lastActive}</dd>
+        <div className="profile-chips">
+          {candidate.expertise.map((area) => (
+            <span key={area}>{area}</span>
+          ))}
         </div>
-      </dl>
-      <div className="selected-actions">
-        <button type="button" className="button primary">
-          <Icon name="contact" />
-          Request intro
-        </button>
-        <button type="button" className="button secondary" onClick={onShortlist}>
-          <Icon name="save" />
-          {shortlisted ? "Saved" : "Save"}
-        </button>
-      </div>
-    </section>
+      </section>
+
+      <section className="drawer-card evidence-card">
+        <h3>Evidence</h3>
+        <div className="evidence-list">
+          {candidate.evidence.map((item) => (
+            <article key={item.label}>
+              <div>
+                <strong>{item.label}</strong>
+                <span>{item.source}</span>
+              </div>
+              <em className={item.status === "Verified" ? "verified" : ""}>
+                {item.status}
+              </em>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="drawer-card preferences-card">
+        <h3>Candidate preferences</h3>
+        <ul className="plain-list">
+          {candidate.preferences.map((preference) => (
+            <li key={preference}>
+              <Icon name="check" />
+              {preference}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="drawer-card intro-card">
+        <div className="drawer-card-heading">
+          <div>
+            <h3>Intro request</h3>
+            <p>Send a structured request through Yee. Contact remains relayed.</p>
+          </div>
+          {introSubmitted && <span className="success-label">Staged</span>}
+        </div>
+        <form className="intro-form" onSubmit={onSubmitIntro}>
+          <label>
+            <span>Role title</span>
+            <input
+              value={introForm.roleTitle}
+              onChange={(event) => onIntroChange("roleTitle", event.target.value)}
+            />
+          </label>
+          <div className="form-grid">
+            <label>
+              <span>Work mode</span>
+              <select
+                value={introForm.workMode}
+                onChange={(event) => onIntroChange("workMode", event.target.value)}
+              >
+                <option>Remote</option>
+                <option>Hybrid</option>
+                <option>Onsite</option>
+              </select>
+            </label>
+            <label>
+              <span>Compensation</span>
+              <input
+                value={introForm.compensation}
+                onChange={(event) =>
+                  onIntroChange("compensation", event.target.value)
+                }
+              />
+            </label>
+          </div>
+          <label>
+            <span>Message</span>
+            <textarea
+              value={introForm.message}
+              onChange={(event) => onIntroChange("message", event.target.value)}
+              rows={4}
+            />
+          </label>
+          <div className="consent-note">
+            <Icon name="shield" />
+            <span>
+              Logged for audit. The candidate chooses whether to reveal a direct
+              contact channel.
+            </span>
+          </div>
+          <button type="submit" className="button primary">
+            <Icon name="contact" />
+            {introSubmitted ? "Request staged" : "Send intro request"}
+          </button>
+        </form>
+      </section>
+
+      <section className="audit-note">
+        <Icon name="audit" />
+        <p>{candidate.auditNote}</p>
+      </section>
+    </aside>
+  );
+}
+
+function Signal({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -819,13 +966,6 @@ function Icon({ name }: { name: IconName }) {
         <svg {...common}>
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
           <path d="M10 21h4" />
-        </svg>
-      );
-    case "arrow":
-      return (
-        <svg {...common}>
-          <path d="M5 12h14" />
-          <path d="m13 6 6 6-6 6" />
         </svg>
       );
     case "audit":
