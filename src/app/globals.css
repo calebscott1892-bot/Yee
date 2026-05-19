@@ -12,6 +12,8 @@
   --teal-strong: #005f5b;
   --teal-soft: #e4f6f3;
   --green: #11833c;
+  --red: #b12d2d;
+  --red-soft: #fff0ef;
   --amber: #bd6a00;
   --amber-soft: #fff5df;
   --shadow: 0 18px 42px rgba(17, 37, 32, 0.07);
@@ -751,7 +753,7 @@ svg {
     "summary summary"
     "signals intro"
     "expertise intro"
-    "evidence intro"
+    "evidence requests"
     "preferences audit";
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
@@ -780,6 +782,10 @@ svg {
 
 .intro-card {
   grid-area: intro;
+}
+
+.request-queue {
+  grid-area: requests;
 }
 
 .audit-note {
@@ -811,6 +817,24 @@ svg {
   gap: 6px;
   min-height: 30px;
   padding: 0 10px;
+}
+
+.success-label.accepted,
+.request-item em.accepted {
+  background: #e7f6ec;
+  color: var(--green);
+}
+
+.success-label.declined,
+.request-item em.declined {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.success-label.pending-candidate,
+.request-item em.pending-candidate {
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
 .drawer-card h3 {
@@ -977,6 +1001,140 @@ svg {
   color: var(--teal);
 }
 
+.request-queue {
+  display: grid;
+  gap: 12px;
+}
+
+.empty-state {
+  background: #f8fbfa;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.request-list {
+  display: grid;
+  gap: 10px;
+}
+
+.request-item {
+  background: #fbfdfc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+}
+
+.request-item.active {
+  border-color: rgba(0, 127, 122, 0.46);
+  box-shadow: 0 0 0 2px rgba(0, 127, 122, 0.08);
+}
+
+.request-item-head {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.request-item strong,
+.request-item span {
+  display: block;
+}
+
+.request-item strong {
+  color: #15201c;
+  font-size: 13px;
+}
+
+.request-item span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+.request-item em {
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.request-item dl {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.request-item dl div {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px;
+}
+
+.request-item dt,
+.request-item dd {
+  margin: 0;
+}
+
+.request-item dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.request-item dd {
+  color: #24302c;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+.request-item p {
+  color: #53615c;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.pipeline-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.pipeline-outcome {
+  align-items: start;
+  border-radius: 8px;
+  display: grid;
+  font-size: 12px;
+  gap: 9px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  line-height: 1.45;
+  padding: 10px;
+}
+
+.pipeline-outcome.accepted {
+  background: #e7f6ec;
+  border: 1px solid #bce2c8;
+  color: #155b2d;
+}
+
+.pipeline-outcome.declined {
+  background: var(--red-soft);
+  border: 1px solid #f1c4c0;
+  color: #7c2424;
+}
+
 @media (max-width: 1340px) {
   .workspace-grid {
     grid-template-columns: 1fr;
@@ -987,13 +1145,14 @@ svg {
       "summary summary"
       "signals intro"
       "expertise intro"
-      "evidence intro"
+      "evidence requests"
       "preferences audit";
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .profile-summary,
   .intro-card,
+  .request-queue,
   .audit-note {
     grid-column: 1 / -1;
   }
@@ -1061,6 +1220,7 @@ svg {
       "evidence"
       "preferences"
       "intro"
+      "requests"
       "audit";
   }
 
@@ -1135,8 +1295,14 @@ svg {
 
   .filter-header,
   .drawer-card-heading,
+  .request-item-head,
   .summary-actions {
     align-items: start;
     flex-direction: column;
+  }
+
+  .request-item dl,
+  .pipeline-actions {
+    grid-template-columns: 1fr;
   }
 }

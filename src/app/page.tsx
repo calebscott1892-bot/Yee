@@ -33,6 +33,21 @@ type Candidate = {
   auditNote: string;
 };
 
+type IntroStatus = "Pending candidate" | "Accepted" | "Declined";
+
+type IntroRequest = {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  roleTitle: string;
+  workMode: string;
+  compensation: string;
+  message: string;
+  status: IntroStatus;
+  sentAt: string;
+  audit: string;
+};
+
 type IconName =
   | "alert"
   | "audit"
@@ -347,7 +362,7 @@ export default function Home() {
     "jason-li",
   ]);
   const [profileBoosted, setProfileBoosted] = useState(false);
-  const [introSubmitted, setIntroSubmitted] = useState(false);
+  const [introRequests, setIntroRequests] = useState<IntroRequest[]>([]);
   const [introForm, setIntroForm] = useState({
     compensation: "$145k - $165k",
     message:
@@ -383,6 +398,9 @@ export default function Home() {
     visibleCandidates.find((candidate) => candidate.id === selectedCandidateId) ??
     visibleCandidates[0] ??
     candidates[0];
+  const selectedIntroRequest = introRequests.find(
+    (request) => request.candidateId === selectedCandidate.id,
+  );
 
   function toggleExpertise(area: string) {
     setSelectedExpertise((current) => {
@@ -422,12 +440,47 @@ export default function Home() {
 
   function selectCandidate(candidateId: string) {
     setSelectedCandidateId(candidateId);
-    setIntroSubmitted(false);
   }
 
   function submitIntro(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIntroSubmitted(true);
+    const request: IntroRequest = {
+      id: `intro-${selectedCandidate.id}`,
+      candidateId: selectedCandidate.id,
+      candidateName: selectedCandidate.name,
+      roleTitle: introForm.roleTitle,
+      workMode: introForm.workMode,
+      compensation: introForm.compensation,
+      message: introForm.message,
+      status: "Pending candidate",
+      sentAt: "Just now",
+      audit:
+        "Request logged with role, range, work mode, and relayed contact consent.",
+    };
+
+    setIntroRequests((current) => {
+      const existing = current.some(
+        (item) => item.candidateId === selectedCandidate.id,
+      );
+
+      if (!existing) {
+        return [request, ...current];
+      }
+
+      return current.map((item) =>
+        item.candidateId === selectedCandidate.id
+          ? { ...request, id: item.id }
+          : item,
+      );
+    });
+  }
+
+  function updateIntroStatus(candidateId: string, status: IntroStatus) {
+    setIntroRequests((current) =>
+      current.map((request) =>
+        request.candidateId === candidateId ? { ...request, status } : request,
+      ),
+    );
   }
 
   return (
@@ -465,7 +518,7 @@ export default function Home() {
           </span>
           <NavItem active icon="search" label="Discover talent" />
           <NavItem icon="save" label="Shortlist" count={shortlistedIds.length} />
-          <NavItem icon="message" label="Intro requests" count={introSubmitted ? 1 : 0} />
+          <NavItem icon="message" label="Intro requests" count={introRequests.length} />
           <NavItem icon="audit" label="Audit log" />
           <NavItem icon="profile" label="Company profile" />
         </nav>
@@ -651,10 +704,14 @@ export default function Home() {
           <ProfileDrawer
             candidate={selectedCandidate}
             introForm={introForm}
-            introSubmitted={introSubmitted}
+            introRequests={introRequests}
+            selectedIntroRequest={selectedIntroRequest}
             shortlisted={shortlistedIds.includes(selectedCandidate.id)}
             onIntroChange={(field, value) =>
               setIntroForm((current) => ({ ...current, [field]: value }))
+            }
+            onIntroStatusChange={(status) =>
+              updateIntroStatus(selectedCandidate.id, status)
             }
             onShortlist={() => toggleShortlist(selectedCandidate.id)}
             onSubmitIntro={submitIntro}
@@ -741,9 +798,11 @@ function CandidateRow({
 function ProfileDrawer({
   candidate,
   introForm,
-  introSubmitted,
+  introRequests,
+  selectedIntroRequest,
   shortlisted,
   onIntroChange,
+  onIntroStatusChange,
   onShortlist,
   onSubmitIntro,
 }: {
@@ -754,15 +813,21 @@ function ProfileDrawer({
     roleTitle: string;
     workMode: string;
   };
-  introSubmitted: boolean;
+  introRequests: IntroRequest[];
+  selectedIntroRequest?: IntroRequest;
   shortlisted: boolean;
   onIntroChange: (
     field: "compensation" | "message" | "roleTitle" | "workMode",
     value: string,
   ) => void;
+  onIntroStatusChange: (status: IntroStatus) => void;
   onShortlist: () => void;
   onSubmitIntro: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const introButtonLabel = selectedIntroRequest
+    ? "Update intro request"
+    : "Send intro request";
+
   return (
     <aside className="profile-drawer" aria-label="Selected candidate profile">
       <section className="drawer-card profile-summary">
@@ -843,7 +908,15 @@ function ProfileDrawer({
             <h3>Intro request</h3>
             <p>Send a structured request through Yee. Contact remains relayed.</p>
           </div>
-          {introSubmitted && <span className="success-label">Staged</span>}
+          {selectedIntroRequest && (
+            <span
+              className={`success-label ${getStatusClass(
+                selectedIntroRequest.status,
+              )}`}
+            >
+              {selectedIntroRequest.status}
+            </span>
+          )}
         </div>
         <form className="intro-form" onSubmit={onSubmitIntro}>
           <label>
@@ -892,9 +965,92 @@ function ProfileDrawer({
           </div>
           <button type="submit" className="button primary">
             <Icon name="contact" />
-            {introSubmitted ? "Request staged" : "Send intro request"}
+            {introButtonLabel}
           </button>
         </form>
+      </section>
+
+      <section className="drawer-card request-queue">
+        <div className="drawer-card-heading">
+          <div>
+            <h3>Request pipeline</h3>
+            <p>Track candidate responses without exposing direct contact.</p>
+          </div>
+          <span>{introRequests.length}</span>
+        </div>
+
+        {introRequests.length === 0 ? (
+          <p className="empty-state">No intro requests sent yet.</p>
+        ) : (
+          <div className="request-list">
+            {introRequests.slice(0, 3).map((request) => (
+              <article
+                className={`request-item ${
+                  request.candidateId === candidate.id ? "active" : ""
+                }`}
+                key={request.id}
+              >
+                <div className="request-item-head">
+                  <div>
+                    <strong>{request.candidateName}</strong>
+                    <span>{request.roleTitle}</span>
+                  </div>
+                  <em className={getStatusClass(request.status)}>
+                    {request.status}
+                  </em>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Mode</dt>
+                    <dd>{request.workMode}</dd>
+                  </div>
+                  <div>
+                    <dt>Range</dt>
+                    <dd>{request.compensation}</dd>
+                  </div>
+                  <div>
+                    <dt>Sent</dt>
+                    <dd>{request.sentAt}</dd>
+                  </div>
+                </dl>
+                <p>{request.audit}</p>
+                {request.candidateId === candidate.id && (
+                  <div className="pipeline-actions">
+                    <button
+                      type="button"
+                      className="button secondary compact"
+                      onClick={() => onIntroStatusChange("Accepted")}
+                    >
+                      <Icon name="check" />
+                      Mark accepted
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary compact"
+                      onClick={() => onIntroStatusChange("Declined")}
+                    >
+                      <Icon name="lock" />
+                      Mark declined
+                    </button>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+
+        {selectedIntroRequest?.status === "Accepted" && (
+          <div className="pipeline-outcome accepted">
+            <Icon name="message" />
+            <span>Relay channel opened. Direct contact still requires final candidate confirmation.</span>
+          </div>
+        )}
+        {selectedIntroRequest?.status === "Declined" && (
+          <div className="pipeline-outcome declined">
+            <Icon name="lock" />
+            <span>No channel released. The decline remains visible in the audit trail.</span>
+          </div>
+        )}
       </section>
 
       <section className="audit-note">
@@ -903,6 +1059,10 @@ function ProfileDrawer({
       </section>
     </aside>
   );
+}
+
+function getStatusClass(status: IntroStatus) {
+  return status.toLowerCase().replaceAll(" ", "-");
 }
 
 function Signal({ label, value }: { label: string; value: string }) {
