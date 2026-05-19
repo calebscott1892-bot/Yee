@@ -68,6 +68,18 @@ type CandidateProfile = {
   summary: string;
 };
 
+type SavedSearch = {
+  id: string;
+  name: string;
+  query: string;
+  expertise: string[];
+  results: number;
+  alertEnabled: boolean;
+  cadence: "Daily digest" | "Realtime";
+  createdAt: string;
+  audit: string;
+};
+
 type ChecklistItem = {
   complete: boolean;
   label: string;
@@ -82,6 +94,7 @@ type StoredYeeState = {
   introForm: IntroForm;
   introRequests: IntroRequest[];
   profileBoosted: boolean;
+  savedSearches: SavedSearch[];
   selectedCandidateId: string;
   selectedExpertise: string[];
   shortlistedIds: string[];
@@ -425,6 +438,8 @@ export default function Home() {
   const [candidateProfile, setCandidateProfile] = useState<CandidateProfile>(
     defaultCandidateProfile,
   );
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [searchNotice, setSearchNotice] = useState("");
 
   useEffect(() => {
     const hydrationId = window.setTimeout(() => {
@@ -447,6 +462,7 @@ export default function Home() {
             : [],
         );
         setProfileBoosted(Boolean(storedState.profileBoosted));
+        setSavedSearches(limitedSavedSearches(storedState.savedSearches));
         const storedCandidateId = storedState.selectedCandidateId;
         const nextSelectedCandidateId =
           typeof storedCandidateId === "string" &&
@@ -483,6 +499,7 @@ export default function Home() {
       introForm,
       introRequests,
       profileBoosted,
+      savedSearches,
       selectedCandidateId,
       selectedExpertise,
       shortlistedIds,
@@ -497,6 +514,7 @@ export default function Home() {
     introForm,
     introRequests,
     profileBoosted,
+    savedSearches,
     selectedCandidateId,
     selectedExpertise,
     shortlistedIds,
@@ -572,6 +590,9 @@ export default function Home() {
     activeRole === "employer" ? employerReadiness : candidateReadiness;
   const readinessCount = sidebarChecklist.filter((item) => item.complete).length;
   const storageLabel = hasHydrated ? "Saved locally" : "Loading workspace";
+  const activeAlertCount = savedSearches.filter(
+    (search) => search.alertEnabled,
+  ).length;
 
   function toggleExpertise(area: string) {
     setSelectedExpertise((current) => {
@@ -624,6 +645,46 @@ export default function Home() {
     document
       .querySelector(".profile-drawer")
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function saveCurrentSearch(alertEnabled: boolean) {
+    const savedSearch = buildSavedSearch({
+      alertEnabled,
+      expertise: selectedExpertise,
+      query,
+      results: visibleCandidates.length,
+    });
+
+    setSavedSearches((current) => {
+      const withoutCurrent = current.filter(
+        (search) => search.id !== savedSearch.id,
+      );
+
+      return [savedSearch, ...withoutCurrent].slice(0, 5);
+    });
+    setSearchNotice(
+      alertEnabled
+        ? `Alert created for ${savedSearch.name}.`
+        : `Search saved for ${savedSearch.name}.`,
+    );
+  }
+
+  function applySavedSearch(search: SavedSearch) {
+    setQuery(search.query);
+    setSelectedExpertise(search.expertise);
+    const nextCandidates = getMatchingCandidates(search.query, search.expertise);
+    setSelectedCandidateId(nextCandidates[0]?.id ?? candidates[0].id);
+    setSearchNotice(`Loaded ${search.name}.`);
+  }
+
+  function toggleSavedSearchAlert(searchId: string) {
+    setSavedSearches((current) =>
+      current.map((search) =>
+        search.id === searchId
+          ? { ...search, alertEnabled: !search.alertEnabled }
+          : search,
+      ),
+    );
   }
 
   function submitIntro(event: FormEvent<HTMLFormElement>) {
@@ -707,6 +768,7 @@ export default function Home() {
           </span>
           <NavItem active icon="search" label="Discover talent" />
           <NavItem icon="save" label="Shortlist" count={shortlistedIds.length} />
+          <NavItem icon="alert" label="Search alerts" count={activeAlertCount} />
           <NavItem icon="message" label="Intro requests" count={introRequests.length} />
           <NavItem icon="audit" label="Audit log" />
           <NavItem icon="profile" label="Company profile" />
@@ -817,11 +879,19 @@ export default function Home() {
               <div className="heading-actions">
                 {activeRole === "employer" ? (
                   <>
-                    <button type="button" className="button secondary">
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => saveCurrentSearch(false)}
+                    >
                       <Icon name="save" />
                       Save search
                     </button>
-                    <button type="button" className="button primary">
+                    <button
+                      type="button"
+                      className="button primary"
+                      onClick={() => saveCurrentSearch(true)}
+                    >
                       <Icon name="alert" />
                       Create alert
                     </button>
@@ -885,6 +955,90 @@ export default function Home() {
                 })}
               </div>
             </section>
+
+            {activeRole === "employer" && (
+              <section
+                className="saved-search-panel"
+                aria-label="Saved talent searches"
+              >
+                <div className="saved-search-head">
+                  <div>
+                    <h2>Saved talent searches</h2>
+                    <p>
+                      Reuse high-signal filters and turn them into alerts
+                      without opening applications.
+                    </p>
+                  </div>
+                  <span>{savedSearches.length}/5</span>
+                </div>
+
+                {searchNotice && (
+                  <div className="search-notice">
+                    <Icon name="check" />
+                    <span>{searchNotice}</span>
+                  </div>
+                )}
+
+                {savedSearches.length === 0 ? (
+                  <p className="empty-state">
+                    Save this search or create an alert to keep a reusable
+                    talent lane.
+                  </p>
+                ) : (
+                  <div className="saved-search-list">
+                    {savedSearches.map((search) => (
+                      <article className="saved-search-card" key={search.id}>
+                        <div className="saved-search-title">
+                          <div>
+                            <strong>{search.name}</strong>
+                            <span>
+                              {search.query
+                                ? `Keyword: ${search.query}`
+                                : "No keyword filter"}
+                            </span>
+                          </div>
+                          <em className={search.alertEnabled ? "active" : ""}>
+                            {search.alertEnabled ? "Alert on" : "Saved"}
+                          </em>
+                        </div>
+                        <div className="saved-search-meta">
+                          <span>{search.results} matches now</span>
+                          <span>{search.cadence}</span>
+                          <span>{search.createdAt}</span>
+                        </div>
+                        <div className="saved-search-skills">
+                          {(search.expertise.length > 0
+                            ? search.expertise
+                            : ["All expertise"]
+                          ).map((area) => (
+                            <span key={area}>{area}</span>
+                          ))}
+                        </div>
+                        <p>{search.audit}</p>
+                        <div className="saved-search-actions">
+                          <button
+                            type="button"
+                            className="button primary compact"
+                            onClick={() => applySavedSearch(search)}
+                          >
+                            <Icon name="search" />
+                            Apply
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary compact"
+                            onClick={() => toggleSavedSearchAlert(search.id)}
+                          >
+                            <Icon name="alert" />
+                            {search.alertEnabled ? "Pause alert" : "Turn on alert"}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
             <div className="list-toolbar">
               <span>
@@ -1484,6 +1638,125 @@ function limitedExpertise(value: unknown) {
         typeof area === "string" && expertiseOptions.includes(area),
     )
     .slice(0, 5);
+}
+
+function limitedSavedSearches(value: unknown): SavedSearch[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((search): search is SavedSearch => {
+      if (!search || typeof search !== "object") {
+        return false;
+      }
+
+      const candidateSearch = search as Partial<SavedSearch>;
+
+      return (
+        typeof candidateSearch.id === "string" &&
+        typeof candidateSearch.name === "string" &&
+        typeof candidateSearch.query === "string" &&
+        Array.isArray(candidateSearch.expertise)
+      );
+    })
+    .map((search) => {
+      const cadence: SavedSearch["cadence"] =
+        search.cadence === "Realtime" ? "Realtime" : "Daily digest";
+
+      return {
+        ...search,
+        alertEnabled: Boolean(search.alertEnabled),
+        audit:
+          search.audit ||
+          "Saved with job-related expertise filters and consent-only matching.",
+        cadence,
+        createdAt: search.createdAt || "Saved locally",
+        expertise: limitedExpertise(search.expertise),
+        results: Number.isFinite(search.results) ? search.results : 0,
+      };
+    })
+    .slice(0, 5);
+}
+
+function buildSavedSearch({
+  alertEnabled,
+  expertise,
+  query,
+  results,
+}: {
+  alertEnabled: boolean;
+  expertise: string[];
+  query: string;
+  results: number;
+}): SavedSearch {
+  const normalizedQuery = query.trim();
+  const limitedAreas = limitedExpertise(expertise);
+  const name = normalizedQuery
+    ? `${toTitleCase(normalizedQuery)} talent`
+    : formatExpertiseName(limitedAreas);
+  const id = `search-${slugify(normalizedQuery || "all")}-${slugify(
+    limitedAreas.join("-") || "all",
+  )}`;
+
+  return {
+    alertEnabled,
+    audit:
+      "Saved with opt-in candidates only. No direct contact is released from alerts.",
+    cadence: alertEnabled ? "Daily digest" : "Daily digest",
+    createdAt: "Just now",
+    expertise: limitedAreas,
+    id,
+    name,
+    query: normalizedQuery,
+    results,
+  };
+}
+
+function getMatchingCandidates(query: string, expertise: string[]) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return candidates
+    .filter((candidate) => {
+      const matchesExpertise =
+        expertise.length === 0 ||
+        expertise.some((area) => candidate.expertise.includes(area));
+      const searchable = [
+        candidate.name,
+        candidate.title,
+        candidate.location,
+        candidate.workMode,
+        ...candidate.expertise,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return matchesExpertise && searchable.includes(normalizedQuery);
+    })
+    .sort((first, second) => second.match - first.match);
+}
+
+function formatExpertiseName(expertise: string[]) {
+  if (expertise.length === 0) {
+    return "All expertise talent";
+  }
+
+  if (expertise.length === 1) {
+    return `${expertise[0]} talent`;
+  }
+
+  return `${expertise[0]} + ${expertise.length - 1} more`;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function toTitleCase(value: string) {
+  return value.replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function readStoredState(): Partial<StoredYeeState> | null {

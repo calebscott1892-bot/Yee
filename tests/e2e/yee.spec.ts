@@ -12,6 +12,16 @@ test("supports core discovery and profile interactions", async ({ page }) => {
   await expect(page.getByText("Aisha Patel")).toBeHidden();
   await expect(page.getByText("Cloud Security Engineer")).toBeVisible();
 
+  await page.getByRole("button", { name: "Save search" }).click();
+  await expect(page.getByText("Saved talent searches")).toBeVisible();
+  await expect(page.getByText("Search saved for Security talent.")).toBeVisible();
+  await expect(page.getByText("Security talent", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Create alert" }).click();
+  await expect(page.getByText("Alert created for Security talent.")).toBeVisible();
+  await expect(page.getByText("Alert on", { exact: true })).toBeVisible();
+  await expect(page.getByText("Search alerts")).toBeVisible();
+
   await page.getByRole("button", { name: "Send intro request" }).click();
   await expect(
     page.getByText("Pending candidate", { exact: true }).first(),

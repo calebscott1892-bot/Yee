@@ -506,6 +506,7 @@ svg {
 .filter-panel,
 .candidate-row,
 .candidate-setup,
+.saved-search-panel,
 .drawer-card,
 .audit-note {
   background: var(--surface);
@@ -516,6 +517,7 @@ svg {
 
 .filter-panel,
 .candidate-setup,
+.saved-search-panel,
 .drawer-card {
   padding: 16px;
 }
@@ -590,6 +592,143 @@ svg {
 .setup-chips button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.saved-search-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.saved-search-head,
+.saved-search-title,
+.saved-search-actions,
+.search-notice {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.saved-search-head h2 {
+  font-size: 16px;
+  font-weight: 760;
+  margin: 0;
+}
+
+.saved-search-head p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 5px 0 0;
+}
+
+.saved-search-head > span {
+  color: var(--teal-strong);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.search-notice {
+  background: #e7f6ec;
+  border: 1px solid #bce2c8;
+  border-radius: 8px;
+  color: #155b2d;
+  justify-content: start;
+  padding: 9px 10px;
+}
+
+.search-notice span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.saved-search-list {
+  display: grid;
+  gap: 10px;
+}
+
+.saved-search-card {
+  background: #fbfdfc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.saved-search-title {
+  align-items: start;
+}
+
+.saved-search-title strong,
+.saved-search-title span {
+  display: block;
+}
+
+.saved-search-title strong {
+  color: #17211d;
+  font-size: 14px;
+}
+
+.saved-search-title span {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.saved-search-title em {
+  background: #f4f7f6;
+  border-radius: 999px;
+  color: #53615c;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.saved-search-title em.active {
+  background: var(--teal-soft);
+  color: var(--teal-strong);
+}
+
+.saved-search-meta,
+.saved-search-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.saved-search-meta span,
+.saved-search-skills span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: #43504b;
+  font-size: 11px;
+  font-weight: 720;
+  padding: 5px 8px;
+}
+
+.saved-search-meta span {
+  background: #fff;
+}
+
+.saved-search-skills span {
+  background: var(--teal-soft);
+  color: var(--teal-strong);
+}
+
+.saved-search-card p {
+  color: #53615c;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.saved-search-actions {
+  justify-content: start;
 }
 
 .list-toolbar {
@@ -1380,6 +1519,7 @@ svg {
   .list-toolbar,
   .list-toolbar > div,
   .profile-builder-actions,
+  .saved-search-actions,
   .row-actions {
     display: grid;
     grid-template-columns: 1fr;
@@ -1447,6 +1587,8 @@ svg {
   .candidate-area-header,
   .drawer-card-heading,
   .request-item-head,
+  .saved-search-head,
+  .saved-search-title,
   .summary-actions {
     align-items: start;
     flex-direction: column;
